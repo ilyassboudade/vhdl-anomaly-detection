@@ -1,6 +1,7 @@
 {
   "None": 0,
-  "Inverted Assignment": 1,
-  "Relational Swap": 2,
-  "Logical Swap": 3
+  "Structural Havoc": 1,
+  "Scramble Architecture": 2,
+  "Syntax Corruption": 3,
+  "Dead Code Injection": 4
 }

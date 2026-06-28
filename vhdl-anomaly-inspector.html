@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VHDL Anomaly Inspector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Fond & Panels : Anthracite et Asphalte industriel */
+    --bg-void: #1A1D20;         /* Fond principal de l'application */
+    --bg-panel: #24292E;        /* Éditeur de code, cartes de stats, barres latérales */
+    --bg-panel-raised: #2F363D; /* Éléments surélevés, menus déroulants, popups */
+    
+    /* Lignes & Séparateurs : Gris acier transparent */
+    --line: rgba(106, 115, 125, 0.15);     /* Bordures des panels et grilles */
+    --line-soft: rgba(106, 115, 125, 0.08);/* Séparateurs discrets */
+    
+    /* Accents Métalliques & Cuivre (Optionnels ou pour l'accentuation) */
+    --copper: #C98A4B;
+    --copper-dim: #8C6238;
+    
+    /* Typographie : Blanc brume et Gris acier */
+    --silk: #E1E4E8;     /* Texte principal (Haute lisibilité sur fond sombre) */
+    --silk-dim: #6A737D; /* Commentaires VHDL (--), sous-titres, labels désactivés */
+    
+    /* Statuts & Détection d'Anomalies */
+    --good: #34D399;                       /* Code sain (NORMAL ✅) - Vert émeraude mat */
+    --good-glow: rgba(52, 211, 153, 0.25); /* Halo discret pour les badges valides */
+    
+    --bad: #E05A47;                        /* Anomalie détectée (ANOMALY ❌) - Orange brique */
+    --bad-glow: rgba(224, 90, 71, 0.35);  /* Surbrillance ou soulignement des fautes */
+    
+    --amber: #D9A441;                      /* Alertes secondaires / Warnings */
+    
+    /* Polices de caractères */
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+}
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+
+  body{
+    background-color:var(--bg-void);
+    background-image:
+      radial-gradient(circle at center, rgba(236,230,214,0.045) 1px, transparent 1.4px);
+    background-size:28px 28px;
+    color:var(--silk);
+    font-family:var(--font-body);
+    min-height:100vh;
+    padding:32px 18px 56px;
+    display:flex;
+    justify-content:center;
+  }
+
+  .board{
+    width:100%;
+    max-width:1040px;
+  }
+
+  header{
+    margin-bottom:28px;
+  }
+
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:0.16em;
+    color:var(--copper);
+    text-transform:uppercase;
+    margin:0 0 10px;
+  }
+
+  h1{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:clamp(28px,4vw,40px);
+    margin:0 0 8px;
+    letter-spacing:-0.01em;
+    text-align: center;
+  }
+
+  .subtitle{
+    color:var(--silk-dim);
+    font-size:14.5px;
+    line-height:1.55;
+    max-width:100%;
+    margin:0 0 14px;
+    display: flex;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .nameplate{
+    display:inline-flex;
+    gap:14px;
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--silk-dim);
+    border:1px solid var(--line);
+    background:var(--bg-panel);
+    padding:7px 12px;
+    border-radius:4px;
+    letter-spacing:0.02em;
+    display: flex;
+    justify-content: center;
+  }
+  .nameplate b{color:var(--copper);font-weight:600;}
+
+  .grid{
+    display:grid;
+    grid-template-columns:1.15fr 1fr;
+    gap:18px;
+    align-items:stretch;
+  }
+
+  @media (max-width:760px){
+    .grid{grid-template-columns:1fr;}
+  }
+
+  .panel{
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .panel-title{
+    font-family:var(--font-mono);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.12em;
+    color:var(--silk-dim);
+    margin:0 0 14px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .panel-title::after{
+    content:'';
+    flex:1;
+    height:1px;
+    background:var(--line);
+  }
+
+  label.visually-hidden{
+    position:absolute;
+    width:1px;height:1px;
+    overflow:hidden;
+    clip:rect(0 0 0 0);
+  }
+
+  textarea{
+    width:100%;
+    min-height:280px;
+    resize:vertical;
+    background:var(--bg-void);
+    border:1px solid var(--line);
+    border-radius:7px;
+    color:var(--silk);
+    font-family:var(--font-mono);
+    font-size:13.5px;
+    line-height:1.6;
+    padding:14px;
+    outline:none;
+    tab-size:4;
+  }
+  textarea::placeholder{color:var(--silk-dim);}
+  textarea:focus{border-color:var(--copper-dim);box-shadow:0 0 0 3px rgba(201,138,75,0.15);}
+
+  .chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin:14px 0 16px;
+  }
+
+  .chip{
+    font-family:var(--font-mono);
+    font-size:11.5px;
+    color:var(--silk-dim);
+    background:var(--bg-panel-raised);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:7px 13px;
+    cursor:pointer;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .chip:hover{border-color:var(--copper-dim);color:var(--silk);}
+  .chip:focus-visible{outline:2px solid var(--copper);outline-offset:2px;}
+
+  .run-row{
+    display:flex;
+    gap:10px;
+    margin-top:auto;
+  }
+
+  button.run{
+    font-family:var(--font-mono);
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    background:var(--copper);
+    color:#1A1208;
+    border:none;
+    border-radius:7px;
+    padding:13px 22px;
+    cursor:pointer;
+    transition:filter .15s ease, transform .1s ease;
+  }
+  button.run:hover{filter:brightness(1.08);}
+  button.run:active{transform:translateY(1px);}
+  button.run:disabled{filter:grayscale(0.4) brightness(0.85);cursor:default;}
+  button.run:focus-visible{outline:2px solid var(--silk);outline-offset:2px;}
+
+  button.clear{
+    font-family:var(--font-mono);
+    font-size:13px;
+    background:transparent;
+    color:var(--silk-dim);
+    border:1px solid var(--line);
+    border-radius:7px;
+    padding:13px 16px;
+    cursor:pointer;
+  }
+  button.clear:hover{color:var(--silk);border-color:var(--copper-dim);}
+  button.clear:focus-visible{outline:2px solid var(--copper);outline-offset:2px;}
+
+  /* ---- Result panel ---- */
+
+  .status-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:18px;
+  }
+
+  .led{
+    width:11px;height:11px;
+    border-radius:50%;
+    background:var(--silk-dim);
+    box-shadow:none;
+    transition:background .3s ease, box-shadow .3s ease;
+    flex:none;
+  }
+  .led.good{background:var(--good);box-shadow:0 0 10px 2px var(--good-glow);}
+  .led.bad{background:var(--bad);box-shadow:0 0 10px 2px var(--bad-glow);}
+
+  .status-label{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:19px;
+    letter-spacing:0.01em;
+    color:var(--silk-dim);
+  }
+  .status-label.good{color:var(--good);}
+  .status-label.bad{color:var(--bad);}
+
+  .gauge-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    margin:4px 0 6px;
+  }
+
+  svg.gauge{width:100%;max-width:230px;}
+
+  .readout{
+    font-family:var(--font-mono);
+    font-weight:500;
+    font-size:38px;
+    letter-spacing:0.01em;
+    text-align:center;
+    margin:2px 0 2px;
+    color:var(--silk-dim);
+    text-shadow:none;
+    transition:color .3s ease, text-shadow .3s ease;
+    font-variant-numeric:tabular-nums;
+  }
+  .readout.good{color:var(--good);text-shadow:0 0 18px var(--good-glow);}
+  .readout.bad{color:var(--bad);text-shadow:0 0 18px var(--bad-glow);}
+
+  .readout-caption{
+    text-align:center;
+    font-family:var(--font-mono);
+    font-size:10.5px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--silk-dim);
+    margin-bottom:18px;
+  }
+
+  .method-tag{
+    align-self:center;
+    font-family:var(--font-mono);
+    font-size:10.5px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    padding:5px 11px;
+    border-radius:20px;
+    border:1px solid var(--line);
+    color:var(--silk-dim);
+    margin-bottom:16px;
+  }
+  .method-tag.reference{color:var(--copper);border-color:var(--copper-dim);}
+  .method-tag.heuristic{color:var(--amber);border-color:rgba(217,164,65,0.4);}
+
+  .flags{
+    font-family:var(--font-mono);
+    font-size:12px;
+    line-height:1.7;
+    color:var(--silk-dim);
+    border-top:1px solid var(--line);
+    padding-top:14px;
+    margin-top:auto;
+  }
+  .flags-title{
+    font-size:10.5px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--silk-dim);
+    margin-bottom:8px;
+  }
+  .flags ul{margin:0;padding-left:18px;}
+  .flags li{margin-bottom:4px;}
+  .flags li.syntax{color:var(--bad);}
+  .flags li.semantic{color:var(--amber);}
+  .flags .clean{color:var(--good);}
+
+  .empty-state{
+    color:var(--silk-dim);
+    font-size:13px;
+    text-align:center;
+    margin:auto 0;
+    padding:30px 10px;
+  }
+
+  footer{
+    margin-top:26px;
+    border-top:1px solid var(--line-soft);
+    padding-top:16px;
+  }
+  footer p{
+    font-size:12px;
+    line-height:1.6;
+    color:var(--silk-dim);
+    font-style:italic;
+    max-width:100%;
+    display: flex;
+    justify-content: center;
+    text-align: center;
+    margin:0;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="board">
+
+  <header>
+    <h1>VHDL Anomaly Inspector</h1>
+    <p class="subtitle">Paste a VHDL source block and run an inspection. <br> The model flags whether the code reads as <br> structurally normal or carries a syntax or semantic anomaly.</p>
+    <div class="nameplate">
+      <span>EMB <b>64</b></span>
+      <span>HID <b>128</b></span>
+      <span>VOCAB <b>76,205</b></span>
+      <span>ARCH <b>RNN&middot;1L</b></span>
+    </div>
+  </header>
+
+  <main class="grid">
+
+    <section class="panel">
+      <p class="panel-title">Source input</p>
+      <label class="visually-hidden" for="code-input">VHDL source code</label>
+      <textarea id="code-input" placeholder="Paste VHDL source here, or load a reference vector below&hellip;" spellcheck="false"></textarea>
+
+      <div class="chips">
+        <button class="chip" data-load="normal" type="button">Load reference &middot; clean AND gate</button>
+        <button class="chip" data-load="syntax" type="button">Load reference &middot; missing semicolons</button>
+        <button class="chip" data-load="semantic" type="button">Load reference &middot; AND/OR swap</button>
+      </div>
+
+      <div class="run-row">
+        <button class="run" id="run-btn" type="button">Run inspection</button>
+        <button class="clear" id="clear-btn" type="button">Clear</button>
+      </div>
+    </section>
+
+    <section class="panel" id="result-panel" aria-live="polite">
+      <p class="panel-title">Inspection result</p>
+
+      <div id="empty-state" class="empty-state">No code inspected yet. Paste a source block and run an inspection, or load a reference vector to see how it reads.</div>
+
+      <div id="result-body" style="display:none; flex:1; display:flex; flex-direction:column;">
+        <div class="status-row">
+          <div class="led" id="led"></div>
+          <div class="status-label" id="status-label">&mdash;</div>
+        </div>
+
+        <div class="gauge-wrap">
+          <svg class="gauge" viewBox="0 0 200 118">
+            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="var(--bg-void)" stroke-width="14" stroke-linecap="round"/>
+            <path id="band-good" d="" fill="none" stroke="var(--good)" stroke-width="14" stroke-linecap="round" opacity="0.55"/>
+            <path id="band-amber" d="" fill="none" stroke="var(--amber)" stroke-width="14" stroke-linecap="round" opacity="0.55"/>
+            <path id="band-bad" d="" fill="none" stroke="var(--bad)" stroke-width="14" stroke-linecap="round" opacity="0.55"/>
+            <line id="needle" x1="100" y1="100" x2="100" y2="35" stroke="var(--silk)" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="100" cy="100" r="5" fill="var(--silk)"/>
+          </svg>
+        </div>
+
+        <p class="readout" id="readout">0.0000</p>
+        <p class="readout-caption">Anomaly probability</p>
+
+        <div class="method-tag" id="method-tag">&mdash;</div>
+
+        <div class="flags" id="flags-box">
+          <p class="flags-title">Inspection notes</p>
+          <ul id="flags-list"></ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>This inspector recognizes three validated reference vectors carried over from the training notebook and returns their exact recorded probabilities on an exact match. For any other input, the trained RNN itself isn't embedded here &mdash; its learned weights were never exported from the training session, only the vocabulary and datasets were &mdash; so a lightweight rule-based heuristic estimates a plausible score by checking for missing semicolons, unbalanced structure, and operator/name mismatches instead. Treat heuristic results as illustrative, not as real model output.</p>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+
+  const REFERENCE_VECTORS = [
+    {
+      id:'normal',
+      prob:0.2146,
+      verdict:'NORMAL',
+      label:'Reference &middot; clean AND gate',
+      code:`LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+
+ENTITY AND_GATE IS
+PORT(
+    A : IN STD_LOGIC;
+    B : IN STD_LOGIC;
+    Y : OUT STD_LOGIC
+);
+END AND_GATE;
+
+ARCHITECTURE BEHAVIOR OF AND_GATE IS
+BEGIN
+    Y <= A AND B;
+END BEHAVIOR;`
+    },
+    {
+      id:'syntax',
+      prob:0.7955,
+      verdict:'ANOMALY',
+      label:'Reference &middot; missing port semicolons',
+      code:`LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+
+ENTITY AND_GATE IS
+PORT(
+    A : IN STD_LOGIC
+    B : IN STD_LOGIC
+    Y : OUT STD_LOGIC
+);
+END AND_GATE;
+
+ARCHITECTURE BEHAVIOR OF AND_GATE IS
+BEGIN
+    Y <= A AND B;
+END BEHAVIOR;`
+    },
+    {
+      id:'semantic',
+      prob:0.5453,
+      verdict:'ANOMALY',
+      label:'Reference &middot; AND/OR logic swap',
+      code:`LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+
+ENTITY AND_GATE IS
+PORT(
+    A : IN STD_LOGIC;
+    B : IN STD_LOGIC;
+    Y : OUT STD_LOGIC
+);
+END AND_GATE;
+
+ARCHITECTURE BEHAVIOR OF AND_GATE IS
+BEGIN
+    Y <= A OR B;   -- semantic error
+END BEHAVIOR;`
+    }
+  ];
+
+  function normalize(code){
+    return code
+      .replace(/\r\n?/g,'\n')
+      .split('\n')
+      .map(l=>l.trim())
+      .filter(l=>l.length>0)
+      .join('\n')
+      .toUpperCase();
+  }
+
+  REFERENCE_VECTORS.forEach(v=>{ v.norm = normalize(v.code); });
+
+  function matchReference(code){
+    const n = normalize(code);
+    if(!n) return null;
+    return REFERENCE_VECTORS.find(v=>v.norm===n) || null;
+  }
+
+  // ---------- Heuristic fallback ----------
+
+  function heuristicAnalyze(rawCode){
+    const code = rawCode.toUpperCase();
+    const syntaxFlags = [];
+    const semanticFlags = [];
+
+    const opens = (code.match(/\(/g)||[]).length;
+    const closes = (code.match(/\)/g)||[]).length;
+    if(opens !== closes) syntaxFlags.push('Unbalanced parentheses');
+
+    const beginCount = (code.match(/\bBEGIN\b/g)||[]).length;
+    const endCount = (code.match(/\bEND\b/g)||[]).length;
+    if(endCount < beginCount) syntaxFlags.push('A BEGIN block has no matching END');
+
+    const portMatch = code.match(/PORT\s*\(([\s\S]*?)\)\s*;/);
+    if(portMatch){
+      const portLines = portMatch[1].split('\n').map(l=>l.trim()).filter(Boolean);
+      portLines.forEach((line, idx)=>{
+        const isLast = idx === portLines.length - 1;
+        if(!isLast && !line.endsWith(';')){
+          syntaxFlags.push('A port signal declaration is missing its terminating semicolon');
+        }
+      });
+    } else if(/PORT\s*\(/.test(code)) {
+      syntaxFlags.push('PORT block is not properly closed');
+    }
+
+    const entityMatch = code.match(/ENTITY\s+(\w+)\s+IS/);
+    if(entityMatch){
+      const entityName = entityMatch[1];
+      const endEntityPattern = new RegExp('END\\s+' + entityName + '\\s*;');
+      if(!endEntityPattern.test(code)){
+        syntaxFlags.push('Entity close does not reference the declared entity name');
+      }
+    }
+
+    const LOGIC_OPS = ['AND','OR','NAND','NOR','XOR','XNOR','NOT'];
+    let nameGate = null;
+    if(entityMatch){
+      const nameTokens = entityMatch[1].split('_');
+      for(const op of LOGIC_OPS){
+        if(nameTokens.includes(op)){ nameGate = op; break; }
+      }
+    }
+
+    const assignMatches = [...code.matchAll(/<=\s*([^;]+);/g)];
+
+    if(nameGate){
+      let usesExpected = false, usesOther = false;
+      assignMatches.forEach(m=>{
+        const rhs = m[1];
+        if(new RegExp('\\b'+nameGate+'\\b').test(rhs)) usesExpected = true;
+        LOGIC_OPS.forEach(op=>{
+          if(op!==nameGate && new RegExp('\\b'+op+'\\b').test(rhs)) usesOther = true;
+        });
+      });
+      if(usesOther && !usesExpected){
+        semanticFlags.push('Logic operator in the assignment does not match the gate implied by the entity name');
+      }
+    }
+
+    if(portMatch){
+      const declared = new Set();
+      portMatch[1].split(/[,:;()]/).forEach(tok=>{
+        const t = tok.trim();
+        if(/^[A-Z_][A-Z0-9_]*$/.test(t) && !['IN','OUT','INOUT','STD_LOGIC','STD_LOGIC_VECTOR','BIT','INTEGER'].includes(t)){
+          declared.add(t);
+        }
+      });
+      const undeclared = new Set();
+      assignMatches.forEach(m=>{
+        const ids = m[1].match(/[A-Z_][A-Z0-9_]*/g) || [];
+        ids.forEach(id=>{
+          if(!LOGIC_OPS.includes(id) && !declared.has(id)) undeclared.add(id);
+        });
+      });
+      undeclared.forEach(id=>{
+        semanticFlags.push('Signal "'+id+'" is used without a matching port or signal declaration');
+      });
+    }
+
+    const syntaxPenalty = Math.min(syntaxFlags.length * 0.22, 0.55);
+    const semanticPenalty = Math.min(semanticFlags.length * 0.18, 0.45);
+    let prob = 0.12 + syntaxPenalty + semanticPenalty;
+    prob = Math.max(0.05, Math.min(prob, 0.97));
+
+    return {
+      prob,
+      verdict: prob > 0.5 ? 'ANOMALY' : 'NORMAL',
+      syntaxFlags,
+      semanticFlags
+    };
+  }
+
+  // ---------- Gauge geometry ----------
+
+  const CX = 100, CY = 100, R_BAND = 80, R_NEEDLE = 65;
+
+  function pointAt(theta, radius){
+    const rad = theta * Math.PI / 180;
+    return { x: CX + radius*Math.cos(rad), y: CY - radius*Math.sin(rad) };
+  }
+
+  function arcPath(thetaStart, thetaEnd, radius){
+    const p0 = pointAt(thetaStart, radius);
+    const p1 = pointAt(thetaEnd, radius);
+    return `M ${p0.x} ${p0.y} A ${radius} ${radius} 0 0 1 ${p1.x} ${p1.y}`;
+  }
+
+  function thetaForProb(p){ return 180 - p*180; }
+
+  document.getElementById('band-good').setAttribute('d', arcPath(thetaForProb(0), thetaForProb(0.35), R_BAND));
+  document.getElementById('band-amber').setAttribute('d', arcPath(thetaForProb(0.35), thetaForProb(0.65), R_BAND));
+  document.getElementById('band-bad').setAttribute('d', arcPath(thetaForProb(0.65), thetaForProb(1), R_BAND));
+
+  function setNeedle(prob){
+    const theta = thetaForProb(prob);
+    const p = pointAt(theta, R_NEEDLE);
+    document.getElementById('needle').setAttribute('x2', p.x);
+    document.getElementById('needle').setAttribute('y2', p.y);
+  }
+
+  setNeedle(0);
+
+  // ---------- UI wiring ----------
+
+  const textarea = document.getElementById('code-input');
+  const runBtn = document.getElementById('run-btn');
+  const clearBtn = document.getElementById('clear-btn');
+  const emptyState = document.getElementById('empty-state');
+  const resultBody = document.getElementById('result-body');
+  const led = document.getElementById('led');
+  const statusLabel = document.getElementById('status-label');
+  const readout = document.getElementById('readout');
+  const methodTag = document.getElementById('method-tag');
+  const flagsBox = document.getElementById('flags-box');
+  const flagsList = document.getElementById('flags-list');
+
+  document.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const ref = REFERENCE_VECTORS.find(v=>v.id===chip.dataset.load);
+      if(ref){
+        textarea.value = ref.code;
+        textarea.focus();
+      }
+    });
+  });
+
+  clearBtn.addEventListener('click', ()=>{
+    textarea.value = '';
+    textarea.focus();
+  });
+
+  let displayedProb = 0;
+  let animFrame = null;
+
+  function animateTo(targetProb, statusClass, durationMs){
+    const startProb = displayedProb;
+    const start = performance.now();
+    if(animFrame) cancelAnimationFrame(animFrame);
+
+    function step(now){
+      const t = Math.min((now - start) / durationMs, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const current = startProb + (targetProb - startProb) * eased;
+      setNeedle(current);
+      readout.textContent = current.toFixed(4);
+      if(t < 1){
+        animFrame = requestAnimationFrame(step);
+      } else {
+        displayedProb = targetProb;
+        setNeedle(targetProb);
+        readout.textContent = targetProb.toFixed(4);
+      }
+    }
+    animFrame = requestAnimationFrame(step);
+  }
+
+  function renderFlags(syntaxFlags, semanticFlags){
+    flagsList.innerHTML = '';
+    if(syntaxFlags.length === 0 && semanticFlags.length === 0){
+      const li = document.createElement('li');
+      li.className = 'clean';
+      li.textContent = 'No structural issues detected by heuristic checks.';
+      flagsList.appendChild(li);
+      return;
+    }
+    syntaxFlags.forEach(f=>{
+      const li = document.createElement('li');
+      li.className = 'syntax';
+      li.textContent = f;
+      flagsList.appendChild(li);
+    });
+    semanticFlags.forEach(f=>{
+      const li = document.createElement('li');
+      li.className = 'semantic';
+      li.textContent = f;
+      flagsList.appendChild(li);
+    });
+  }
+
+  function applyResult({ prob, verdict, method, syntaxFlags, semanticFlags }){
+    const statusClass = verdict === 'NORMAL' ? 'good' : 'bad';
+
+    led.className = 'led ' + statusClass;
+    statusLabel.className = 'status-label ' + statusClass;
+    statusLabel.textContent = verdict;
+    readout.className = 'readout ' + statusClass;
+
+    methodTag.className = 'method-tag ' + method;
+    methodTag.textContent = method === 'reference' ? 'Reference vector match' : 'Heuristic estimate';
+
+    if(method === 'reference'){
+      flagsList.innerHTML = '';
+      const li = document.createElement('li');
+      li.className = statusClass === 'good' ? 'clean' : 'semantic';
+      li.textContent = 'Exact match to a validated reference vector — recorded probability returned directly.';
+      flagsList.appendChild(li);
+    } else {
+      renderFlags(syntaxFlags, semanticFlags);
+    }
+
+    animateTo(prob, statusClass, 650);
+  }
+
+  function runInspection(){
+    const code = textarea.value;
+    if(!code.trim()){
+      textarea.focus();
+      return;
+    }
+
+    emptyState.style.display = 'none';
+    resultBody.style.display = 'flex';
+
+    runBtn.disabled = true;
+    runBtn.textContent = 'Analyzing\u2026';
+
+    setTimeout(()=>{
+      const ref = matchReference(code);
+      if(ref){
+        applyResult({ prob: ref.prob, verdict: ref.verdict, method:'reference' });
+      } else {
+        const h = heuristicAnalyze(code);
+        applyResult({ prob: h.prob, verdict: h.verdict, method:'heuristic', syntaxFlags: h.syntaxFlags, semanticFlags: h.semanticFlags });
+      }
+      runBtn.disabled = false;
+      runBtn.textContent = 'Run inspection';
+    }, 380);
+  }
+
+  runBtn.addEventListener('click', runInspection);
+
+  textarea.addEventListener('keydown', (e)=>{
+    if((e.metaKey || e.ctrlKey) && e.key === 'Enter'){
+      runInspection();
+    }
+  });
+
+})();
+</script>
+
+</body>
+</html>
