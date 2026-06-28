@@ -62,15 +62,13 @@ Pour garantir une augmentation minimale du vocabulaire et maximiser la force sé
   
   - `<EOS>` (`3`) : Indicateur de fin de séquence.
 
-## 📦 Livrables & Interopérabilité des Échanges
+## 📦 Données livrables
 
-Les structures de données sont découplées des frameworks et écrites sous forme de matrices NumPy hautement stables plutôt que de types personnalisés propres à un framework.
-
-| **Artefact Livrable**  | **Type**          | **Consommateur Explicite** | **Schéma Interne / Objectif**                                                                       |
-| ---------------------- | ----------------- | -------------------------- | --------------------------------------------------------------------------------------------------- |
-| **`vocab.json`**       | Dictionnaire JSON | Ingénieur ML               | Correspondance `token_string ➔ integer_index` pour l'initialisation du plongement.                  |
-| **`error_types.json`** | Dictionnaire JSON | Les deux responsables      | Correspondance `error_string ➔ integer_index` pour la catégorisation multi-classe.                  |
-| **`train.npz`**        | Binaire NumPy     | Ingénieur ML               | Contient les tableaux `input_ids (N, 512)`, `labels (N,)` et `error_types (N,)`.                    |
-| **`val.npz`**          | Binaire NumPy     | Responsable Éval           | Structure identique ; dédié aux balayages des métriques d'évaluation et aux ajustements.            |
-| **`test.npz`**         | Binaire NumPy     | Responsable Éval           | **Jeu de données de test (Held-out).** Verrouillé jusqu'à l'évaluation finale.                      |
-| **`vhdl_dataset.csv`** | Données CSV       | Les deux responsables      | Texte brut des chaînes sources, mutations et étiquettes correspondantes pour vérification et audit. |
+| **Artefact Livrable**  | **Type**          | **Schéma Interne / Objectif**                                                                       |
+| ---------------------- | ----------------- | --------------------------------------------------------------------------------------------------- |
+| **`vocab.json`**       | Dictionnaire JSON | Correspondance `token_string ➔ integer_index` pour l'initialisation du plongement.                  |
+| **`error_types.json`** | Dictionnaire JSON | Correspondance `error_string ➔ integer_index` pour la catégorisation multi-classe.                  |
+| **`train.npz`**        | Binaire NumPy     | Contient les tableaux `input_ids (N, 512)`, `labels (N,)` et `error_types (N,)`.                    |
+| **`val.npz`**          | Binaire NumPy     | Structure identique ; dédié aux balayages des métriques d'évaluation et aux ajustements.            |
+| **`test.npz`**         | Binaire NumPy     | **Jeu de données de test (Held-out).** Verrouillé jusqu'à l'évaluation finale.                      |
+| **`vhdl_dataset.csv`** | Données CSV       | Texte brut des chaînes sources, mutations et étiquettes correspondantes pour vérification et audit. |
