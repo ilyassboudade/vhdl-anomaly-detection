@@ -1,6 +1,6 @@
 # Détection d'Anomalies du code VHDL
 
-> Un pipeline de deep learning qui analyse le code source VHDL tokenisé pour détecter les erreurs syntaxiques et sémantiques avant la simulation. Il identifie le type d'anomalie spécifique via un RNN simple.
+> Une implémentation manuelle d'un RNN simple qui analyse le code source VHDL tokenisé pour détecter ses erreurs syntaxiques et sémantiques avant la simulation.
 
 # Projet de Fin de Module
 
@@ -12,19 +12,19 @@
 
 - DOUIBA Youssef
 
-**Encadrant :** Prof. HANNOUNI Salma
+**Encadrant :** Pr. HANNOUNI Salma
 
-## Livrables du Projet
+## Contenus de ce répertoire
 
-Ce dossier contient les livrables requis pour la présentation du projet de fin de module :
+- **Rapport succinct** détaillant le contexte, l'approche méthodologique et l'analyse des performances.
 
-1. **Rapport succinct** détaillant le contexte, l'approche méthodologique et l'analyse des performances.
+- **Poster Scientifique** résumant les détails du projet entammés dans le rapport du projet.
 
-2. **Vidéo de démonstration** de 4 minutes présentant l'exécution du pipeline, le comportement du modèle et les résultats obtenus.
+- **Vidéo de démonstration** présentant le comportement du modèle et les résultats obtenus.
 
-3. **Notebook Jupyter complet** contenant le code source structuré, nettoyé, documenté et exécutable.
+- **Notebook Jupyter complet** contenant le code source structuré, nettoyé, documenté et exécutable.
 
-## Description du Projet & Architecture
+## Description du Projet
 
 Le projet implémente un réseau **RNN** conçu pour analyser la syntaxe séquentielle du code VHDL au niveau des caractères. Comme les erreurs logiques s'étendent souvent sur plusieurs lignes et dépendent fortement d'un contexte à longue portée, le système utilise une architecture récurrente pour mémoriser et évaluer l'état de la description matérielle.
 
@@ -32,7 +32,7 @@ Pour pallier la forte redondance du code VHDL, nous avons mis en place une strat
 
 ## 📊 Jeu de Données & Stratégie de Mutation
 
-- **Corpus de base :** `hdl2v/vhdl-dataset` sur HuggingFace (`8 626` paires d'échantillons bruts).
+- **Corpus de base :** `hdl2v/vhdl-dataset` sur HuggingFace (`8626` paires d'échantillons bruts).
 
 - **Le Défi :** Le jeu de données source est conçu pour la traduction de VHDL en Verilog. Il ne contient aucune erreur pré-étiquetée.
 
@@ -62,7 +62,7 @@ Pour garantir une augmentation minimale du vocabulaire et maximiser la force sé
   
   - `<EOS>` (`3`) : Indicateur de fin de séquence.
 
-## 📦 Données livrables
+## 📦 Données livrables (trouvées dans le dossier "/data")
 
 | **Artefact Livrable**  | **Type**          | **Schéma Interne / Objectif**                                                                       |
 | ---------------------- | ----------------- | --------------------------------------------------------------------------------------------------- |
