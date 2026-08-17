@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VHDL Anomaly Detector</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2303045E'/><path d='M8 10L14 22H18L24 10H20L16 18L12 10H8Z' fill='%2301C39A'/></svg>">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Code:ital,wght,MONO@0,300..800,1;1,300..800,1&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+<style>
+  :root {
+    --bg-void: #FFFFFF;         /* Fond principal de l'application (White) */
+    --bg-panel: #F4F7FB;        /* Éditeur de code, cartes de stats (Light Blue Tint) */
+    --bg-panel-raised: #E2E8F0; /* Éléments surélevés, menus déroulants, popups */
+    
+    /* Lignes & Séparateurs : Royal Blue transparent */
+    --line: rgba(1, 61, 137, 0.15);     /* Bordures des panels et grilles */
+    --line-soft: rgba(1, 61, 137, 0.08);/* Séparateurs discrets */
+    
+    /* Accents Principaux (Remplace le cuivre) */
+    --primary: #013D89;         /* Royal Blue */
+    --primary-dim: #03045E;     /* Dark Navy */
+    
+    /* Typographie : Dark Navy & Dark Gray */
+    --silk: #03045E;            /* Texte principal (Dark Navy) */
+    --silk-dim: #585858;        /* Commentaires VHDL (--), sous-titres, labels désactivés */
+    
+    /* Statuts & Détection d'Anomalies */
+    --good: #01C39A;            /* Code sain (NORMAL ✅) - Teal/Mint */
+    --good-glow: rgba(1, 195, 154, 0.25);
+    
+    --bad: #DC2525;             /* Anomalie syntaxique (ANOMALY ❌) - Alert Red */
+    --bad-glow: rgba(220, 37, 37, 0.25);
+    
+    --amber: #7B39EC;           /* Anomalie sémantique / Warnings - Purple/Violet */
+    --amber-glow: rgba(123, 57, 236, 0.25);
+    
+    /* Polices de caractères */
+    --font-display: "Google Sans Code", monospace;
+    --font-body: "Google Sans Code", monospace;
+    --font-mono: "Google Sans Code", monospace;
+  }
+
+  * {
+    box-sizing: border-box;
+    font-optical-sizing: auto;
+    font-variation-settings: "MONO" 1;
+  }
+  
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background-color: var(--bg-void);
+    background-image: radial-gradient(circle at center, rgba(1, 61, 137, 0.04) 1px, transparent 1.4px);
+    background-size: 28px 28px;
+    color: var(--silk);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    padding: 32px 18px 56px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .board {
+    width: 100%;
+    max-width: 1040px;
+  }
+
+  header {
+    margin-bottom: 24px;
+  }
+
+  .nav-bar {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .nav-btn {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--bg-panel);
+    color: var(--silk-dim);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 8px 18px;
+    cursor: pointer;
+    transition: all .2s ease;
+  }
+
+  .nav-btn:hover {
+    color: var(--silk);
+    border-color: var(--primary-dim);
+  }
+
+  .nav-btn.active {
+    background: var(--primary);
+    color: #FFFFFF;
+    border-color: var(--primary);
+    box-shadow: 0 0 10px rgba(1, 61, 137, 0.25);
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(28px, 4vw, 40px);
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+    text-align: center;
+    color: var(--primary-dim);
+  }
+
+  .subtitle {
+    color: var(--silk-dim);
+    font-size: 14.5px;
+    line-height: 1.55;
+    max-width: 100%;
+    margin: 0 0 14px;
+    display: flex;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .nameplate {
+    display: inline-flex;
+    gap: 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--silk-dim);
+    border: 1px solid var(--line);
+    background: var(--bg-panel);
+    padding: 7px 12px;
+    border-radius: 4px;
+    letter-spacing: 0.02em;
+    display: flex;
+    justify-content: center;
+    margin: 0 0 14px;
+  }
+  .nameplate b { color: var(--primary); font-weight: 600; }
+
+  .view-container { display: block; }
+  .view-container.hidden { display: none; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 18px;
+    align-items: stretch;
+  }
+
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--silk-dim);
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  label.visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 280px;
+    resize: vertical;
+    background: var(--bg-void);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    color: var(--silk);
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    line-height: 1.6;
+    padding: 14px;
+    outline: none;
+    tab-size: 4;
+  }
+  textarea::placeholder { color: var(--silk-dim); }
+  textarea:focus { border-color: var(--primary-dim); box-shadow: 0 0 0 3px rgba(3, 4, 94, 0.15); }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0 16px;
+  }
+
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--silk-dim);
+    background: var(--bg-panel-raised);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 7px 13px;
+    cursor: pointer;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .chip:hover { border-color: var(--primary-dim); color: var(--silk); }
+  .chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+  .run-row {
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+  }
+
+  button.run {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--primary);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 7px;
+    padding: 13px 22px;
+    cursor: pointer;
+    transition: filter .15s ease, transform .1s ease;
+  }
+  button.run:hover { filter: brightness(1.08); }
+  button.run:active { transform: translateY(1px); }
+  button.run:disabled { filter: grayscale(0.4) brightness(0.85); cursor: default; }
+  button.run:focus-visible { outline: 2px solid var(--silk); outline-offset: 2px; }
+
+  button.clear {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: transparent;
+    color: var(--silk-dim);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 13px 16px;
+    cursor: pointer;
+  }
+  button.clear:hover { color: var(--silk); border-color: var(--primary-dim); }
+  button.clear:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+  /* ---- Result panel ---- */
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .led {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: var(--silk-dim);
+    box-shadow: none;
+    transition: background .3s ease, box-shadow .3s ease;
+    flex: none;
+  }
+  .led.good { background: var(--good); box-shadow: 0 0 10px 2px var(--good-glow); }
+  .led.bad { background: var(--bad); box-shadow: 0 0 10px 2px var(--bad-glow); }
+
+  .status-label {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: 0.01em;
+    color: var(--silk-dim);
+  }
+  .status-label.good { color: var(--good); }
+  .status-label.bad { color: var(--bad); }
+
+  .gauge-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 4px 0 6px;
+  }
+
+  svg.gauge { width: 100%; max-width: 230px; }
+
+  .readout {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 38px;
+    letter-spacing: 0.01em;
+    text-align: center;
+    margin: 2px 0 2px;
+    color: var(--silk-dim);
+    text-shadow: none;
+    transition: color .3s ease, text-shadow .3s ease;
+    font-variant-numeric: tabular-nums;
+  }
+  .readout.good { color: var(--good); text-shadow: 0 0 18px var(--good-glow); }
+  .readout.bad { color: var(--bad); text-shadow: 0 0 18px var(--bad-glow); }
+
+  .readout-caption {
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--silk-dim);
+    margin-bottom: 18px;
+  }
+
+  .method-tag {
+    align-self: center;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 5px 11px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    color: var(--silk-dim);
+    margin-bottom: 16px;
+  }
+  .method-tag.reference { color: var(--primary); border-color: var(--primary-dim); }
+  .method-tag.heuristic { color: var(--amber); border-color: rgba(123, 57, 236, 0.4); }
+
+  .flags {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--silk-dim);
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+    margin-top: auto;
+  }
+  .flags-title {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--silk-dim);
+    margin-bottom: 10px;
+  }
+
+  .flag-section { margin-bottom: 12px; }
+  
+  .flag-header {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block;
+    margin-bottom: 6px;
+  }
+  
+  .flag-header.syntax {
+    background: rgba(220, 37, 37, 0.1);
+    color: var(--bad);
+    border: 1px solid rgba(220, 37, 37, 0.3);
+  }
+  
+  .flag-header.semantic {
+    background: rgba(123, 57, 236, 0.1);
+    color: var(--amber);
+    border: 1px solid rgba(123, 57, 236, 0.3);
+  }
+
+  .flags ul { margin: 0; padding-left: 18px; }
+  .flags li { margin-bottom: 4px; }
+  .flags li.syntax { color: var(--bad); }
+  .flags li.semantic { color: var(--amber); }
+  .flags .clean { color: var(--good); }
+
+  .empty-state {
+    color: var(--silk-dim);
+    font-size: 13px;
+    text-align: center;
+    margin: auto 0;
+    padding: 30px 10px;
+  }
+
+  /* ---- About Section Styling ---- */
+
+  .about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  @media (max-width: 760px) {
+    .about-grid { grid-template-columns: 1fr; }
+  }
+
+  .about-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px;
+  }
+
+  .about-card.full-width { grid-column: 1 / -1; }
+
+  .about-card h2 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    margin: 0 0 12px;
+    color: var(--primary-dim);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .about-card p, .about-card li {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--silk-dim);
+  }
+
+  .about-card ul {
+    padding-left: 18px;
+    margin: 8px 0;
+  }
+
+  .stat-badge {
+    display: inline-block;
+    background: rgba(1, 61, 137, 0.08);
+    border: 1px solid rgba(1, 61, 137, 0.2);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--primary);
+  }
+
+  .academic-credit {
+    border-left: 3px solid var(--primary);
+    padding-left: 14px;
+    margin-top: 10px;
+  }
+
+  .academic-credit h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    margin: 0 0 4px;
+    color: var(--silk);
+  }
+
+  .academic-credit p {
+    margin: 0;
+    font-size: 12.5px;
+  }
+
+  /* Interface Disclaimer Card */
+  .interface-note {
+    border: 1px dashed var(--primary);
+    background: rgba(1, 61, 137, 0.03);
+    margin-top: 8px;
+  }
+  
+  .interface-note p {
+    color: var(--silk-dim);
+    font-size: 13px;
+    line-height: 1.65;
+    margin: 0;
+  }
+
+  /* ---- Model Architecture spec table ---- */
+  .about-card table.spec-table {
+    width: 100%;
+    margin: 14px 0 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 13.5px;
+  }
+
+  .spec-table th,
+  .spec-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line-soft);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .spec-table tr:last-child th,
+  .spec-table tr:last-child td { border-bottom: none; }
+
+  .spec-table tr:first-child th { border-top-left-radius: 7px; }
+  .spec-table tr:first-child td { border-top-right-radius: 7px; }
+  .spec-table tr:last-child th  { border-bottom-left-radius: 7px; }
+  .spec-table tr:last-child td  { border-bottom-right-radius: 7px; }
+
+  .spec-table th {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--primary);
+    background: rgba(1, 61, 137, 0.06);
+    border-right: 1px solid var(--line-soft);
+    white-space: nowrap;
+    width: 1%;
+  }
+
+  .spec-table td {
+    color: var(--silk-dim);
+    line-height: 1.45;
+  }
+
+  .spec-table td b { color: var(--silk); }
+
+  @media (max-width: 560px) {
+    .spec-table th,
+    .spec-table td { display: block; width: auto; }
+    .spec-table th {
+      white-space: normal;
+      background: transparent;
+      border-right: none;
+      border-bottom: none;
+      padding-bottom: 2px;
+    }
+    .spec-table td { padding-top: 2px; }
+  }
+
+  /* ---- Detection Profile card ---- */
+  .profile-top {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 12px 0 18px;
+  }
+
+  .accuracy-ring {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background: conic-gradient(var(--primary) 78.4%, var(--bg-panel-raised) 0);
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+
+  .accuracy-ring b {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: var(--bg-panel);
+    display: grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: 14.5px;
+    color: var(--primary);
+  }
+
+  .accuracy-caption b {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--silk);
+    margin-bottom: 2px;
+  }
+
+  .accuracy-caption span {
+    font-size: 12.5px;
+    color: var(--silk-dim);
+  }
+
+  .profile-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 0 0 16px;
+  }
+
+  .metric-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .metric-name {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .metric-name.good  { color: var(--good); }
+  .metric-name.amber { color: var(--amber); }
+  .metric-name.bad   { color: var(--bad); }
+
+  .metric-val {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--silk-dim);
+    white-space: nowrap;
+  }
+
+  .meter {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--bg-panel-raised);
+    border: 1px solid var(--line-soft);
+    overflow: hidden;
+  }
+
+  .meter-fill {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+  }
+  .meter-fill.good  { background: var(--good); }
+  .meter-fill.amber { background: var(--amber); }
+  .meter-fill.bad   { background: var(--bad); }
+
+  .profile-summary {
+    margin: 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-soft);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--silk-dim);
+  }
+
+  /* ---- Dataset Profile card ---- */
+  .balance-ring {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background: conic-gradient(var(--good) 0 50%, var(--bad) 0 100%);
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+
+  .balance-ring b {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: var(--bg-panel);
+    display: grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    color: var(--silk);
+  }
+
+  .dist-bar {
+    display: flex;
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--line-soft);
+    background: var(--bg-panel-raised);
+    margin: 4px 0 14px;
+  }
+
+  .dist-seg { display: block; height: 100%; }
+  .dist-seg.healthy  { background: var(--good); }
+  .dist-seg.dead     { background: var(--primary); }
+  .dist-seg.syntax   { background: var(--bad); }
+  .dist-seg.havoc    { background: var(--amber); }
+  .dist-seg.scramble { background: var(--primary-dim); }
+
+  .dist-legend {
+    list-style: none;
+    margin: 0 0 16px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dist-legend li {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .dist-legend .dot {
+    flex: none;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    transform: translateY(1px);
+  }
+  .dot.healthy  { background: var(--good); }
+  .dot.dead     { background: var(--primary); }
+  .dot.syntax   { background: var(--bad); }
+  .dot.havoc    { background: var(--amber); }
+  .dot.scramble { background: var(--primary-dim); }
+
+  .legend-name {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--silk);
+    white-space: nowrap;
+  }
+
+  .legend-desc {
+    flex: 1;
+    font-size: 12px;
+    color: var(--silk-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .legend-val {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--silk-dim);
+    white-space: nowrap;
+  }
+
+  footer {
+    margin-top: 26px;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 16px;
+  }
+  footer p {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--silk-dim);
+    font-style: italic;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+    text-align: center;
+    margin: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  .animate__animated {
+    --animate-duration: 1.5s;
+  }
+</style>
+</head>
+<body>
+
+<div class="board animate__animated animate__fadeIn">
+
+  <header>
+    <h1>VHDL Anomaly Detector</h1>
+
+    <nav class="nav-bar">
+      <button class="nav-btn active" id="nav-detector" type="button">Home</button>
+      <button class="nav-btn" id="nav-about" type="button">About</button>
+    </nav>
+  </header>
+
+  <!-- Single-Page View Switcher Container 1: Detector -->
+  <div id="detector-view" class="view-container">
+    <p class="subtitle">Write or paste VHDL source code and run a detection. <br> The model flags whether the code reads as structurally normal or carries a syntax or semantic anomaly.</p>
+
+    <main class="grid">
+
+      <section class="panel">
+        <p class="panel-title">Source input</p>
+        <label class="visually-hidden" for="code-input">VHDL source code</label>
+        <textarea id="code-input" placeholder="Paste VHDL source here, or load a reference vector below&hellip;" spellcheck="false"></textarea>
+
+        <div class="chips">
+          <button class="chip" data-load="normal" type="button">Load reference &middot; clean AND gate</button>
+          <button class="chip" data-load="syntax" type="button">Load reference &middot; missing semicolons</button>
+          <button class="chip" data-load="semantic" type="button">Load reference &middot; AND/OR swap</button>
+        </div>
+
+        <div class="run-row">
+          <button class="run" id="run-btn" type="button">Run detection</button>
+          <button class="clear" id="clear-btn" type="button">Clear</button>
+        </div>
+      </section>
+
+      <section class="panel" id="result-panel" aria-live="polite">
+        <p class="panel-title">Detection result</p>
+
+        <div id="empty-state" class="empty-state" style="text-align: left;">Detection result will be available as soon as a VHDL source code block or a reference is loaded.</div>
+
+        <div id="result-body" style="display:none; flex:1; display:flex; flex-direction:column;">
+          <div class="status-row">
+            <div class="led" id="led"></div>
+            <div class="status-label" id="status-label">&mdash;</div>
+          </div>
+
+          <div class="gauge-wrap">
+            <svg class="gauge" viewBox="0 0 200 118">
+              <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="var(--line)" stroke-width="14" stroke-linecap="round"/>
+              <path id="band-good" d="" fill="none" stroke="var(--good)" stroke-width="14" stroke-linecap="round" opacity="0.55"/>
+              <path id="band-amber" d="" fill="none" stroke="var(--amber)" stroke-width="14" stroke-linecap="round" opacity="0.55"/>
+              <path id="band-bad" d="" fill="none" stroke="var(--bad)" stroke-width="14" stroke-linecap="round" opacity="0.55"/>
+              <line id="needle" x1="100" y1="100" x2="100" y2="35" stroke="var(--silk)" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="100" cy="100" r="5" fill="var(--silk)"/>
+            </svg>
+          </div>
+
+          <p class="readout" id="readout">0.0000</p>
+          <p class="readout-caption">Anomaly probability</p>
+
+          <div class="method-tag" id="method-tag">&mdash;</div>
+
+          <div class="flags" id="flags-box">
+            <p class="flags-title">Detection notes</p>
+            <div id="flags-list-container"></div>
+          </div>
+        </div>
+      </section>
+      
+      <section class="about-card full-width interface-note">
+        <p style="text-align: center;">This interface is a demonstration: it runs on a simple proofreader-style checklist, so it needs no high-end resources.<br>The load references show the system&rsquo;s real recorded results, as the trained RNN itself was never exported from the training session.</p>
+      </section>
+    </main>
+  </div>
+
+  <!-- Single-Page View Switcher Container 2: About & Methodology -->
+  <div id="about-view" class="view-container hidden">
+    <main class="about-grid">
+      
+      <!-- Academic Credit & Team -->
+      <section class="about-card full-width">
+        <h2>Academic Credit</h2>
+        <div class="academic-credit">
+          <h3>Faculté des Sciences Ben M'Sick</h3>
+          <p style="margin-top: 6px; color: var(--silk);">IANLP 2026 - AI Conference for NLP</p>
+          <p style="margin-top: 6px;">Université Hassan II</p>
+        </div>
+      </section>
+
+      <!-- Context -->
+      <section class="about-card">
+        <h2>Context</h2>
+        <p>Traditional VHDL compilers and linters are <b>limited to basic syntax</b> checking and frequently <b>fail to detect subtle logical or semantic anomalies</b> prior to active functional simulation. <br> This project leverages a <b>Recurrent Neural Network (RNN)</b> (a sequential deep machine learning algorithm) to automatically <b>identify failing structural behaviors and semantic flaws</b> in hardware code, and to challenge <b>the limits of a Recurrent Neural Network</b> on tasks that have bigger requirements than its capabilities.</p>
+      </section>
+
+      <!-- Architecture & Implementation -->
+      <section class="about-card">
+        <h2>Model Architecture</h2>
+        <p>Guaranteeing total mastery over temporal backpropagation dynamics, the RNN was <b>implemented entirely from scratch</b> with NumPy and Pandas.</p>
+        <table class="spec-table">
+          <tbody>
+            <tr>
+              <th scope="row">Sequence</th>
+              <td><b>512 Tokens</b> (Max Size)</td>
+            </tr>
+            <tr>
+              <th scope="row">Embedding</th>
+              <td><b>64 Dimension</b> Vector</td>
+            </tr>
+            <tr>
+              <th scope="row">Hidden State</th>
+              <td><b>128 Neurons</b> (Single RNN Layer Size)</td>
+            </tr>
+            <tr>
+              <th scope="row">Optimization</th>
+              <td>
+                <b>Adam</b><br>
+                <b>Learning Rate:</b> 3 &times; 10<sup>-3</sup><br>
+                <b>Gradient Clip:</b> 5.0
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Dataset & Mutations -->
+      <section class="about-card">
+        <h2>Dataset Profile</h2>
+        <div class="profile-top">
+          <div class="balance-ring" role="img" aria-label="8,613 samples, balanced 50 percent healthy and 50 percent corrupted">
+            <b>8,613</b>
+          </div>
+          <div class="accuracy-caption">
+            <b>Balanced Dataset (50 / 50)</b>
+            <span>cleaned from a standardized Hugging Face repository</span>
+          </div>
+        </div>
+
+        <div class="dist-bar" role="img" aria-label="Distribution of healthy and corrupted samples">
+          <span class="dist-seg healthy"  style="width:50%"   title="Healthy &mdash; 4,307"></span>
+          <span class="dist-seg dead"     style="width:13.4%" title="Dead Code Injection &mdash; 1,154"></span>
+          <span class="dist-seg syntax"   style="width:13.1%" title="Syntax Corruption &mdash; 1,126"></span>
+          <span class="dist-seg havoc"    style="width:12.5%" title="Structural Havoc &mdash; 1,079"></span>
+          <span class="dist-seg scramble" style="width:11%"   title="Scramble Architecture &mdash; 947"></span>
+        </div>
+
+        <ul class="dist-legend">
+          <li>
+            <span class="dot healthy"></span>
+            <span class="legend-name">Healthy Code</span>
+            <span class="legend-desc">clean excerpts</span>
+            <span class="legend-val">4,307 &middot; 50.0%</span>
+          </li>
+          <li>
+            <span class="dot dead"></span>
+            <span class="legend-name">Dead Code Injection</span>
+            <span class="legend-desc">inaccessible / useless code</span>
+            <span class="legend-val">1,154 &middot; 13.4%</span>
+          </li>
+          <li>
+            <span class="dot syntax"></span>
+            <span class="legend-name">Syntax Corruption</span>
+            <span class="legend-desc">missing semicolons, keyword swaps</span>
+            <span class="legend-val">1,126 &middot; 13.1%</span>
+          </li>
+          <li>
+            <span class="dot havoc"></span>
+            <span class="legend-name">Structural Havoc</span>
+            <span class="legend-desc">destroyed syntax structure</span>
+            <span class="legend-val">1,079 &middot; 12.5%</span>
+          </li>
+          <li>
+            <span class="dot scramble"></span>
+            <span class="legend-name">Scramble Architecture</span>
+            <span class="legend-desc">shuffled logic blocks</span>
+            <span class="legend-val">947 &middot; 11.0%</span>
+          </li>
+        </ul>
+
+        <p class="profile-summary">Because real defective VHDL code is scarce, a custom error-injection pipeline corrupted the healthy excerpts to reach a perfect 50/50 balance &mdash; giving the RNN equal exposure to normal and anomalous structures.</p>
+      </section>
+
+      <!-- Performance -->
+      <section class="about-card">
+        <h2>Detection Profile</h2>
+        <div class="profile-top">
+          <div class="accuracy-ring" role="img" aria-label="Global test accuracy 78.4 percent">
+            <b>78.4%</b>
+          </div>
+          <div class="accuracy-caption">
+            <b>Global Test Accuracy</b>
+            <span>after 15 epochs &mdash; rapid convergence by epoch 6</span>
+          </div>
+        </div>
+
+        <div class="profile-metrics">
+          <div class="metric">
+            <div class="metric-head">
+              <span class="metric-name good">Syntax Errors</span>
+              <span class="metric-val">~80% sensitivity</span>
+            </div>
+            <div class="meter"><span class="meter-fill good" style="width:80%"></span></div>
+          </div>
+
+          <div class="metric">
+            <div class="metric-head">
+              <span class="metric-name amber">Semantic Errors</span>
+              <span class="metric-val">~55&ndash;60% sensitivity</span>
+            </div>
+            <div class="meter"><span class="meter-fill amber" style="width:58%"></span></div>
+          </div>
+
+          <div class="metric">
+            <div class="metric-head">
+              <span class="metric-name bad">False Positives</span>
+              <span class="metric-val">21% rate</span>
+            </div>
+            <div class="meter"><span class="meter-fill bad" style="width:21%"></span></div>
+          </div>
+        </div>
+
+        <p class="profile-summary">The model reliably detects grammatical breaks and keyword corruptions, and moderately detects logical flaws and structural chaos; however, due to memory loss on long sequences, it occasionally flags healthy excerpts as anomalous.</p>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <ul style="list-style-type: none; display: flex; justify-content: center; gap: 2%; padding: 0; margin: 0;">
+     <a style="text-decoration: none; color: var(--silk-dim);" href="https://github.com/ilyassboudade/vhdl-anomaly-detection" target="_blank">
+     <li style="display: flex; justify-content: center; align-items: center; gap: 5px;">
+       <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0,0,256,256">
+	<g fill="#585858" fill-rule="nonzero" stroke="none" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" stroke-dasharray="" stroke-dashoffset="0" font-family="none" font-weight="none" font-size="none" text-anchor="none" style="mix-blend-mode: normal">
+		<g transform="scale(8.53333,8.53333)">
+			<path d="M15,3c-6.627,0 -12,5.373 -12,12c0,5.623 3.872,10.328 9.092,11.63c-0.056,-0.162 -0.092,-0.35 -0.092,-0.583v-2.051c-0.487,0 -1.303,0 -1.508,0c-0.821,0 -1.551,-0.353 -1.905,-1.009c-0.393,-0.729 -0.461,-1.844 -1.435,-2.526c-0.289,-0.227 -0.069,-0.486 0.264,-0.451c0.615,0.174 1.125,0.596 1.605,1.222c0.478,0.627 0.703,0.769 1.596,0.769c0.433,0 1.081,-0.025 1.691,-0.121c0.328,-0.833 0.895,-1.6 1.588,-1.962c-3.996,-0.411 -5.903,-2.399 -5.903,-5.098c0,-1.162 0.495,-2.286 1.336,-3.233c-0.276,-0.94 -0.623,-2.857 0.106,-3.587c1.798,0 2.885,1.166 3.146,1.481c0.896,-0.307 1.88,-0.481 2.914,-0.481c1.036,0 2.024,0.174 2.922,0.483c0.258,-0.313 1.346,-1.483 3.148,-1.483c0.732,0.731 0.381,2.656 0.102,3.594c0.836,0.945 1.328,2.066 1.328,3.226c0,2.697 -1.904,4.684 -5.894,5.097c1.098,0.573 1.899,2.183 1.899,3.396v2.734c0,0.104 -0.023,0.179 -0.035,0.268c4.676,-1.639 8.035,-6.079 8.035,-11.315c0,-6.627 -5.373,-12 -12,-12z"></path>
+		</g>
+	</g>
+       </svg>
+       <p>Source code</p>
+     </li>
+     </a>
+
+     <a style="text-decoration: none; color: var(--silk-dim);" href="https://www.youtube.com/@boudadeilyasse" target="_blank">
+     <li style="display: flex; justify-content: center; align-items: center; gap: 5px;">
+       <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0,0,256,256">
+<g fill="#585858" fill-rule="nonzero" stroke="none" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" stroke-dasharray="" stroke-dashoffset="0" font-family="none" font-weight="none" font-size="none" text-anchor="none" style="mix-blend-mode: normal"><g transform="scale(5.12,5.12)"><path d="M44.89844,14.5c-0.39844,-2.19922 -2.29687,-3.80078 -4.5,-4.30078c-3.29687,-0.69922 -9.39844,-1.19922 -16,-1.19922c-6.59766,0 -12.79687,0.5 -16.09766,1.19922c-2.19922,0.5 -4.10156,2 -4.5,4.30078c-0.40234,2.5 -0.80078,6 -0.80078,10.5c0,4.5 0.39844,8 0.89844,10.5c0.40234,2.19922 2.30078,3.80078 4.5,4.30078c3.5,0.69922 9.5,1.19922 16.10156,1.19922c6.60156,0 12.60156,-0.5 16.10156,-1.19922c2.19922,-0.5 4.09766,-2 4.5,-4.30078c0.39844,-2.5 0.89844,-6.10156 1,-10.5c-0.20312,-4.5 -0.70312,-8 -1.20312,-10.5zM19,32v-14l12.19922,7z"></path></g></g>
+</svg>
+       <p>Project Overview (Soon)</p>
+     </li>
+     </a>
+
+     <a style="text-decoration: none; color: var(--silk-dim);" href="https://www.linkedin.com/in/ilyassboudade/" target="_blank">
+     <li style="display: flex; justify-content: center; align-items: center; gap: 5px;">
+       <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0,0,256,256">
+<g fill="#585858" fill-rule="nonzero" stroke="none" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" stroke-dasharray="" stroke-dashoffset="0" font-family="none" font-weight="none" font-size="none" text-anchor="none" style="mix-blend-mode: normal"><g transform="scale(5.12,5.12)"><path d="M41,4h-32c-2.76,0 -5,2.24 -5,5v32c0,2.76 2.24,5 5,5h32c2.76,0 5,-2.24 5,-5v-32c0,-2.76 -2.24,-5 -5,-5zM17,20v19h-6v-19zM11,14.47c0,-1.4 1.2,-2.47 3,-2.47c1.8,0 2.93,1.07 3,2.47c0,1.4 -1.12,2.53 -3,2.53c-1.8,0 -3,-1.13 -3,-2.53zM39,39h-6c0,0 0,-9.26 0,-10c0,-2 -1,-4 -3.5,-4.04h-0.08c-2.42,0 -3.42,2.06 -3.42,4.04c0,0.91 0,10 0,10h-6v-19h6v2.56c0,0 1.93,-2.56 5.81,-2.56c3.97,0 7.19,2.73 7.19,8.26z"></path></g></g>
+</svg>
+       <p>LinkedIn</p>
+     </li>
+     </a>
+    </ul>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+
+  const REFERENCE_VECTORS = [
+    {
+      id:'normal',
+      prob:0.2146,
+      verdict:'NORMAL',
+      label:'Reference &middot; clean AND gate',
+      code:`LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+
+ENTITY AND_GATE IS
+PORT(
+    A : IN STD_LOGIC;
+    B : IN STD_LOGIC;
+    Y : OUT STD_LOGIC
+);
+END AND_GATE;
+
+ARCHITECTURE BEHAVIOR OF AND_GATE IS
+BEGIN
+    Y <= A AND B;
+END BEHAVIOR;`
+    },
+    {
+      id:'syntax',
+      prob:0.7955,
+      verdict:'ANOMALY',
+      label:'Reference &middot; missing port semicolons',
+      code:`LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+
+ENTITY AND_GATE IS
+PORT(
+    A : IN STD_LOGIC
+    B : IN STD_LOGIC
+    Y : OUT STD_LOGIC
+);
+END AND_GATE;
+
+ARCHITECTURE BEHAVIOR OF AND_GATE IS
+BEGIN
+    Y <= A AND B;
+END BEHAVIOR;`
+    },
+    {
+      id:'semantic',
+      prob:0.5453,
+      verdict:'ANOMALY',
+      label:'Reference &middot; AND/OR logic swap',
+      code:`LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+
+ENTITY AND_GATE IS
+PORT(
+    A : IN STD_LOGIC;
+    B : IN STD_LOGIC;
+    Y : OUT STD_LOGIC
+);
+END AND_GATE;
+
+ARCHITECTURE BEHAVIOR OF AND_GATE IS
+BEGIN
+    Y <= A OR B;   -- semantic error
+END BEHAVIOR;`
+    }
+  ];
+
+  function normalize(code){
+    return code
+      .replace(/\r\n?/g,'\n')
+      .split('\n')
+      .map(l=>l.trim())
+      .filter(l=>l.length>0)
+      .join('\n')
+      .toUpperCase();
+  }
+
+  REFERENCE_VECTORS.forEach(v=>{ v.norm = normalize(v.code); });
+
+  function matchReference(code){
+    const n = normalize(code);
+    if(!n) return null;
+    return REFERENCE_VECTORS.find(v=>v.norm===n) || null;
+  }
+
+  function heuristicAnalyze(rawCode){
+    const code = rawCode.toUpperCase();
+    const syntaxFlags = [];
+    const semanticFlags = [];
+
+    const opens = (code.match(/\(/g)||[]).length;
+    const closes = (code.match(/\)/g)||[]).length;
+    if(opens !== closes) syntaxFlags.push('Unbalanced parentheses');
+
+    const beginCount = (code.match(/\bBEGIN\b/g)||[]).length;
+    const endCount = (code.match(/\bEND\b/g)||[]).length;
+    if(endCount < beginCount) syntaxFlags.push('A BEGIN block has no matching END');
+
+    const portMatch = code.match(/PORT\s*\(([\s\S]*?)\)\s*;/);
+    if(portMatch){
+      const portLines = portMatch[1].split('\n').map(l=>l.trim()).filter(Boolean);
+      portLines.forEach((line, idx)=>{
+        const isLast = idx === portLines.length - 1;
+        if(!isLast && !line.endsWith(';')){
+          syntaxFlags.push('A port signal declaration is missing its terminating semicolon');
+        }
+      });
+    } else if(/PORT\s*\(/.test(code)) {
+      syntaxFlags.push('PORT block is not properly closed');
+    }
+
+    const entityMatch = code.match(/ENTITY\s+(\w+)\s+IS/);
+    if(entityMatch){
+      const entityName = entityMatch[1];
+      const endEntityPattern = new RegExp('END\\s+' + entityName + '\\s*;');
+      if(!endEntityPattern.test(code)){
+        syntaxFlags.push('Entity close does not reference the declared entity name');
+      }
+    }
+
+    const LOGIC_OPS = ['AND','OR','NAND','NOR','XOR','XNOR','NOT'];
+    let nameGate = null;
+    if(entityMatch){
+      const nameTokens = entityMatch[1].split('_');
+      for(const op of LOGIC_OPS){
+        if(nameTokens.includes(op)){ nameGate = op; break; }
+      }
+    }
+
+    const assignMatches = [...code.matchAll(/<=\s*([^;]+);/g)];
+
+    if(nameGate){
+      let usesExpected = false, usesOther = false;
+      assignMatches.forEach(m=>{
+        const rhs = m[1];
+        if(new RegExp('\\b'+nameGate+'\\b').test(rhs)) usesExpected = true;
+        LOGIC_OPS.forEach(op=>{
+          if(op!==nameGate && new RegExp('\\b'+op+'\\b').test(rhs)) usesOther = true;
+        });
+      });
+      if(usesOther && !usesExpected){
+        semanticFlags.push('Logic operator in the assignment does not match the gate implied by the entity name');
+      }
+    }
+
+    if(portMatch){
+      const declared = new Set();
+      portMatch[1].split(/[,:;()]/).forEach(tok=>{
+        const t = tok.trim();
+        if(/^[A-Z_][A-Z0-9_]*$/.test(t) && !['IN','OUT','INOUT','STD_LOGIC','STD_LOGIC_VECTOR','BIT','INTEGER'].includes(t)){
+          declared.add(t);
+        }
+      });
+      const undeclared = new Set();
+      assignMatches.forEach(m=>{
+        const ids = m[1].match(/[A-Z_][A-Z0-9_]*/g) || [];
+        ids.forEach(id=>{
+          if(!LOGIC_OPS.includes(id) && !declared.has(id)) undeclared.add(id);
+        });
+      });
+      undeclared.forEach(id=>{
+        semanticFlags.push('Signal "'+id+'" is used without a matching port or signal declaration');
+      });
+    }
+
+    const syntaxPenalty = Math.min(syntaxFlags.length * 0.22, 0.55);
+    const semanticPenalty = Math.min(semanticFlags.length * 0.18, 0.45);
+    let prob = 0.12 + syntaxPenalty + semanticPenalty;
+    prob = Math.max(0.05, Math.min(prob, 0.97));
+
+    return {
+      prob,
+      verdict: prob > 0.5 ? 'ANOMALY' : 'NORMAL',
+      syntaxFlags,
+      semanticFlags
+    };
+  }
+
+  const CX = 100, CY = 100, R_BAND = 80, R_NEEDLE = 65;
+
+  function pointAt(theta, radius){
+    const rad = theta * Math.PI / 180;
+    return { x: CX + radius*Math.cos(rad), y: CY - radius*Math.sin(rad) };
+  }
+
+  function arcPath(thetaStart, thetaEnd, radius){
+    const p0 = pointAt(thetaStart, radius);
+    const p1 = pointAt(thetaEnd, radius);
+    return `M ${p0.x} ${p0.y} A ${radius} ${radius} 0 0 1 ${p1.x} ${p1.y}`;
+  }
+
+  function thetaForProb(p){ return 180 - p*180; }
+
+  document.getElementById('band-good').setAttribute('d', arcPath(thetaForProb(0), thetaForProb(0.35), R_BAND));
+  document.getElementById('band-amber').setAttribute('d', arcPath(thetaForProb(0.35), thetaForProb(0.65), R_BAND));
+  document.getElementById('band-bad').setAttribute('d', arcPath(thetaForProb(0.65), thetaForProb(1), R_BAND));
+
+  function setNeedle(prob){
+    const theta = thetaForProb(prob);
+    const p = pointAt(theta, R_NEEDLE);
+    document.getElementById('needle').setAttribute('x2', p.x);
+    document.getElementById('needle').setAttribute('y2', p.y);
+  }
+
+  setNeedle(0);
+
+  const navDetector = document.getElementById('nav-detector');
+  const navAbout = document.getElementById('nav-about');
+  const detectorView = document.getElementById('detector-view');
+  const aboutView = document.getElementById('about-view');
+
+  navDetector.addEventListener('click', ()=>{
+    navDetector.classList.add('active');
+    navAbout.classList.remove('active');
+    detectorView.classList.remove('hidden');
+    aboutView.classList.add('hidden');
+  });
+
+  navAbout.addEventListener('click', ()=>{
+    navAbout.classList.add('active');
+    navDetector.classList.remove('active');
+    aboutView.classList.remove('hidden');
+    detectorView.classList.add('hidden');
+  });
+
+  const textarea = document.getElementById('code-input');
+  const runBtn = document.getElementById('run-btn');
+  const clearBtn = document.getElementById('clear-btn');
+  const emptyState = document.getElementById('empty-state');
+  const resultBody = document.getElementById('result-body');
+  const led = document.getElementById('led');
+  const statusLabel = document.getElementById('status-label');
+  const readout = document.getElementById('readout');
+  const methodTag = document.getElementById('method-tag');
+  const flagsListContainer = document.getElementById('flags-list-container');
+
+  document.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const ref = REFERENCE_VECTORS.find(v=>v.id===chip.dataset.load);
+      if(ref){
+        textarea.value = ref.code;
+        textarea.focus();
+      }
+    });
+  });
+
+  clearBtn.addEventListener('click', ()=>{
+    textarea.value = '';
+    textarea.focus();
+  });
+
+  let displayedProb = 0;
+  let animFrame = null;
+
+  function animateTo(targetProb, statusClass, durationMs){
+    const startProb = displayedProb;
+    const start = performance.now();
+    if(animFrame) cancelAnimationFrame(animFrame);
+
+    function step(now){
+      const t = Math.min((now - start) / durationMs, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const current = startProb + (targetProb - startProb) * eased;
+      setNeedle(current);
+      readout.textContent = current.toFixed(4);
+      if(t < 1){
+        animFrame = requestAnimationFrame(step);
+      } else {
+        displayedProb = targetProb;
+        setNeedle(targetProb);
+        readout.textContent = targetProb.toFixed(4);
+      }
+    }
+    animFrame = requestAnimationFrame(step);
+  }
+
+  function renderFlags(syntaxFlags, semanticFlags){
+    flagsListContainer.innerHTML = '';
+    
+    if(syntaxFlags.length === 0 && semanticFlags.length === 0){
+      const ul = document.createElement('ul');
+      const li = document.createElement('li');
+      li.className = 'clean';
+      li.textContent = 'No structural issues detected by heuristic checks.';
+      ul.appendChild(li);
+      flagsListContainer.appendChild(ul);
+      return;
+    }
+
+    if(syntaxFlags.length > 0){
+      const sec = document.createElement('div');
+      sec.className = 'flag-section';
+      
+      const hdr = document.createElement('span');
+      hdr.className = 'flag-header syntax';
+      hdr.textContent = 'Syntax Errors (~80% sensitivity)';
+      sec.appendChild(hdr);
+
+      const ul = document.createElement('ul');
+      syntaxFlags.forEach(f=>{
+        const li = document.createElement('li');
+        li.className = 'syntax';
+        li.textContent = f;
+        ul.appendChild(li);
+      });
+      sec.appendChild(ul);
+      flagsListContainer.appendChild(sec);
+    }
+
+    if(semanticFlags.length > 0){
+      const sec = document.createElement('div');
+      sec.className = 'flag-section';
+      
+      const hdr = document.createElement('span');
+      hdr.className = 'flag-header semantic';
+      hdr.textContent = 'Semantic Errors (~55–60% sensitivity)';
+      sec.appendChild(hdr);
+
+      const ul = document.createElement('ul');
+      semanticFlags.forEach(f=>{
+        const li = document.createElement('li');
+        li.className = 'semantic';
+        li.textContent = f;
+        ul.appendChild(li);
+      });
+      sec.appendChild(ul);
+      flagsListContainer.appendChild(sec);
+    }
+  }
+
+  function applyResult({ prob, verdict, method, syntaxFlags, semanticFlags, refId }){
+    const statusClass = verdict === 'NORMAL' ? 'good' : 'bad';
+
+    led.className = 'led ' + statusClass;
+    statusLabel.className = 'status-label ' + statusClass;
+    statusLabel.textContent = verdict;
+    readout.className = 'readout ' + statusClass;
+
+    methodTag.className = 'method-tag ' + method;
+    methodTag.textContent = method === 'reference' ? 'Reference vector match' : 'Heuristic estimate';
+
+    if(method === 'reference'){
+      flagsListContainer.innerHTML = '';
+      
+      if(refId === 'syntax'){
+        renderFlags(['A port signal declaration is missing its terminating semicolon'], []);
+      } else if(refId === 'semantic'){
+        renderFlags([], ['Logic operator in assignment (OR) differs from entity gate declaration (AND)']);
+      } else {
+        renderFlags([], []);
+      }
+    } else {
+      renderFlags(syntaxFlags, semanticFlags);
+    }
+
+    animateTo(prob, statusClass, 650);
+  }
+
+  function runInspection(){
+    const code = textarea.value;
+    if(!code.trim()){
+      textarea.focus();
+      return;
+    }
+
+    emptyState.style.display = 'none';
+    resultBody.style.display = 'flex';
+
+    runBtn.disabled = true;
+    runBtn.textContent = 'Analyzing\u2026';
+
+    setTimeout(()=>{
+      const ref = matchReference(code);
+      if(ref){
+        applyResult({ prob: ref.prob, verdict: ref.verdict, method:'reference', refId: ref.id });
+      } else {
+        const h = heuristicAnalyze(code);
+        applyResult({ prob: h.prob, verdict: h.verdict, method:'heuristic', syntaxFlags: h.syntaxFlags, semanticFlags: h.semanticFlags });
+      }
+      runBtn.disabled = false;
+      runBtn.textContent = 'Run detection';
+    }, 380);
+  }
+
+  runBtn.addEventListener('click', runInspection);
+
+  textarea.addEventListener('keydown', (e)=>{
+    if((e.metaKey || e.ctrlKey) && e.key === 'Enter'){
+      runInspection();
+    }
+  });
+
+})();
+</script>
+
+</body>
+</html>
