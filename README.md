@@ -1,4 +1,4 @@
-# 🚀 VHDL Code Anomaly Detection
+# 🚀 VHDL Anomaly Detector
 
 > A manual Recurrent Neural Network (RNN) implementation that analyzes tokenized VHDL source code to detect syntactic and semantic errors prior to simulation. By parsing VHDL descriptions at the character/token level, the system leverages a recurrent architecture to retain long-range context and identify corrupted hardware code.
 
@@ -10,11 +10,13 @@
 
 - **Core Language:** Python 3.10
 
-- **Data & AI:** NumPy, Pygments (`VhdlLexer`), HuggingFace Datasets, Jupyter Notebook
+- **Data:** HuggingFace Datasets
+
+- **Deep Learning:** NumPy, Pygments (`VhdlLexer`)
 
 - **Storage & Databases:** JSON, NumPy NPZ binary format, CSV
 
-- **Tools & Environment:** Git, VS Code, Linux/Bash
+- **Tools & Environment:** Git, Jupyter Notebook, Linux/Bash
 
 ### System Architecture
 
@@ -41,13 +43,13 @@ jupyter notebook
 
 ## 📌 Key Features & Capabilities
 
-- [x] **Custom Synthetic Mutation Strategy:** Automated pipeline converting clean VHDL code into labeled anomaly profiles across multiple error types.
+- **Custom Synthetic Mutation Strategy:** Automated pipeline converting clean VHDL code into labeled anomaly profiles across multiple error types.
 
-- [x] **Custom Tokenization & Normalization:** Robust VHDL lexer integration with upper-case normalization and special sequence tokens (`<PAD>`, `<UNK>`, `<BOS>`, `<EOS>`).
+- **Custom Tokenization & Normalization:** Robust VHDL lexer integration with upper-case normalization and special sequence tokens (`<PAD>`, `<UNK>`, `<BOS>`, `<EOS>`).
 
-- [x] **Character & Token-Level Sequential RNN:** Custom manual RNN handling long-range structural dependencies inherent in hardware description languages.
+- **Character & Token-Level Sequential RNN:** Custom manual RNN handling long-range structural dependencies inherent in hardware description languages.
 
-- [x] **Structured Data Deliverables:** Pre-packaged dataset splits (`train.npz`, `val.npz`, `test.npz`) alongside vocabulary mappings (`vocab.json`, `error_types.json`).
+- **Structured Data Deliverables:** Pre-packaged dataset splits (`train.npz`, `val.npz`, `test.npz`) alongside vocabulary mappings (`vocab.json`, `error_types.json`).
 
 # 
 
