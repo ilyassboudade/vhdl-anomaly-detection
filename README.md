@@ -1,74 +1,63 @@
-# Détection d'Anomalies du code VHDL
+# 🚀 VHDL Code Anomaly Detection
 
-> Une implémentation manuelle d'un RNN simple qui analyse le code source VHDL tokenisé pour détecter ses erreurs syntaxiques et sémantiques avant la simulation.
+> A manual Recurrent Neural Network (RNN) implementation that analyzes tokenized VHDL source code to detect syntactic and semantic errors prior to simulation. By parsing VHDL descriptions at the character/token level, the system leverages a recurrent architecture to retain long-range context and identify corrupted hardware code.
 
-# Projet de Fin de Module
+## 📸 Demo
 
-**Membres du groupe :**
+![Project Demo / Dashboard](docs/assets/demo.png)*
 
-- BOUDADE Ilyass
+## 🛠️ Tech Stack & Architecture
 
-- ATIK Zakaria
+- **Core Language:** Python 3.10
 
-- DOUIBA Youssef
+- **Data & AI:** NumPy, Pygments (`VhdlLexer`), HuggingFace Datasets, Jupyter Notebook
 
-**Encadrant :** Pr. HANNOUNI Salma
+- **Storage & Databases:** JSON, NumPy NPZ binary format, CSV
 
-## Contenus de ce répertoire
+- **Tools & Environment:** Git, VS Code, Linux/Bash
 
-- **Rapport succinct** détaillant le contexte, l'approche méthodologique et l'analyse des performances.
+### System Architecture
 
-- **Poster Scientifique** résumant les détails du projet entammés dans le rapport du projet.
+1. **Ingestion & Data Preparation:** Extraction from HuggingFace dataset (`hdl2v/vhdl-dataset`), error-injection mutation strategy for generating balanced healthy (`label = 0`) and corrupted (`label = 1`) code profiles.
 
-- **Vidéo de démonstration** présentant le comportement du modèle et les résultats obtenus.
+2. **Preprocessing & Tokenization:** Lexical analysis via `pygments.lexers.VhdlLexer`, case-normalization via `str.upper()`, vocabulary mapping, and padding/truncation to fixed input sizes.
 
-- **Notebook Jupyter complet** contenant le code source structuré, nettoyé, documenté et exécutable.
+3. **Modeling & Evaluation:** Sequential RNN architecture processing tokens to detect sequence-level anomalies and multi-class error types.
 
-## Description du Projet
+## ⚙️ Quickstart & Local Installation
 
-Le projet implémente un réseau **RNN** conçu pour analyser la syntaxe séquentielle du code VHDL au niveau des caractères. Comme les erreurs logiques s'étendent souvent sur plusieurs lignes et dépendent fortement d'un contexte à longue portée, le système utilise une architecture récurrente pour mémoriser et évaluer l'état de la description matérielle.
+Bash
 
-Pour pallier la forte redondance du code VHDL, nous avons mis en place une stratégie de mutation avancée permettant d'isoler distinctement les profils de code sains des profils corrompus. Les résultats d'entraînement montrent une convergence claire de la fonction de perte et une bonne séparation des anomalies.
+```
+# 1. Clone the repository
+git clone https://github.com/your-username/vhdl-anomaly-detection.git
 
-## 📊 Jeu de Données & Stratégie de Mutation
+# 2. Install dependencies
+pip install -r requirements.txt
 
-- **Corpus de base :** `hdl2v/vhdl-dataset` sur HuggingFace (`8626` paires d'échantillons bruts).
+# 3. Execute application / Run Notebook
+jupyter notebook
+```
 
-- **Le Défi :** Le jeu de données source est conçu pour la traduction de VHDL en Verilog. Il ne contient aucune erreur pré-étiquetée.
+## 📌 Key Features & Capabilities
 
-- **La Solution :** Pour entraîner un classificateur supervisé binaire et multi-classe, l'injection d'anomalies synthétiques est nécessaire :
-  
-  1. Analyser le code VHDL propre et compilable (`label = 0`, `error_type = "NONE"`).
-  
-  2. Introduire **exactement une stratégie d'injection d'erreur**.
-  
-  3. Étiqueter le code muté (`label = 1`) et le classer dans l'un des types d'erreurs désignés.
+- [x] **Custom Synthetic Mutation Strategy:** Automated pipeline converting clean VHDL code into labeled anomaly profiles across multiple error types.
 
-## Spécifications de Tokenisation & de Normalisation
+- [x] **Custom Tokenization & Normalization:** Robust VHDL lexer integration with upper-case normalization and special sequence tokens (`<PAD>`, `<UNK>`, `<BOS>`, `<EOS>`).
 
-Pour garantir une augmentation minimale du vocabulaire et maximiser la force sémantique des plongements :
+- [x] **Character & Token-Level Sequential RNN:** Custom manual RNN handling long-range structural dependencies inherent in hardware description languages.
 
-- **Analyseur Lexical (Lexer) :** `pygments.lexers.VhdlLexer`
+- [x] **Structured Data Deliverables:** Pre-packaged dataset splits (`train.npz`, `val.npz`, `test.npz`) alongside vocabulary mappings (`vocab.json`, `error_types.json`).
 
-- **Insensibilité à la Casse :** Tous les jetons sont strictement convertis en majuscules via `str.upper()` pour correspondre aux spécifications du VHDL.
+# 
 
-- **Jetons Spéciaux :**
-  
-  - `<PAD>` (`0`) : Élément de remplissage de séquence (padding).
-  
-  - `<UNK>` (`1`) : Termes hors vocabulaire interceptés lors de l'inférence.
-  
-  - `<BOS>` (`2`) : Indicateur de début de séquence.
-  
-  - `<EOS>` (`3`) : Indicateur de fin de séquence.
+## 📦 Data Deliverables (`/data` directory)
 
-## 📦 Données livrables (trouvées dans le dossier "/data")
-
-| **Artefact Livrable**  | **Type**          | **Schéma Interne / Objectif**                                                                       |
-| ---------------------- | ----------------- | --------------------------------------------------------------------------------------------------- |
-| **`vocab.json`**       | Dictionnaire JSON | Correspondance `token_string ➔ integer_index` pour l'initialisation du plongement.                  |
-| **`error_types.json`** | Dictionnaire JSON | Correspondance `error_string ➔ integer_index` pour la catégorisation multi-classe.                  |
-| **`train.npz`**        | Binaire NumPy     | Contient les tableaux `input_ids (N, 512)`, `labels (N,)` et `error_types (N,)`.                    |
-| **`val.npz`**          | Binaire NumPy     | Structure identique ; dédié aux balayages des métriques d'évaluation et aux ajustements.            |
-| **`test.npz`**         | Binaire NumPy     | **Jeu de données de test (Held-out).** Verrouillé jusqu'à l'évaluation finale.                      |
-| **`vhdl_dataset.csv`** | Données CSV       | Texte brut des chaînes sources, mutations et étiquettes correspondantes pour vérification et audit. |
+| **Deliverable Artifact** | **Type**        | **Internal Schema / Purpose**                                                       |
+| ------------------------ | --------------- | ----------------------------------------------------------------------------------- |
+| **`vocab.json`**         | JSON Dictionary | Mapping `token_string ➔ integer_index` for embedding initialization.                |
+| **`error_types.json`**   | JSON Dictionary | Mapping `error_string ➔ integer_index` for multi-class categorization.              |
+| **`train.npz`**          | NumPy Binary    | Contains array tensors `input_ids (N, 512)`, `labels (N,)`, and `error_types (N,)`. |
+| **`val.npz`**            | NumPy Binary    | Identical structure; dedicated to evaluation metrics and hyperparameter tuning.     |
+| **`test.npz`**           | NumPy Binary    | **Held-out test dataset.** Kept locked until final evaluation.                      |
+| **`vhdl_dataset.csv`**   | CSV Data        | Raw text of source strings, mutations, and corresponding labels for auditing.       |
