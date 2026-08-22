@@ -4,7 +4,7 @@
 
 ## 📸 Demo
 
-![Project Demo / Dashboard](docs/assets/demo.png)*
+![Project Demo / Dashboard](docs/assets/demo.png)
 
 ## 🛠️ Tech Stack & Architecture
 
