@@ -26,10 +26,7 @@
 
 3. **Modeling & Evaluation:** Sequential RNN architecture processing tokens to detect sequence-level anomalies and multi-class error types.
 
-## ⚙️ Quickstart & Local Installation
-
-Bash
-
+## ⚙️ Quickstart
 ```
 # 1. Clone the repository
 git clone https://github.com/your-username/vhdl-anomaly-detection.git
