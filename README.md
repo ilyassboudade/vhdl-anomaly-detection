@@ -29,7 +29,7 @@
 ## ⚙️ Quickstart
 ```
 # 1. Clone the repository
-git clone https://github.com/your-username/vhdl-anomaly-detection.git
+git clone https://github.com/ilyassboudade/vhdl-anomaly-detection.git
 
 # 2. Install dependencies
 pip install -r requirements.txt
