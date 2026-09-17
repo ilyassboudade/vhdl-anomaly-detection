@@ -1,7 +1,7 @@
 # 🚀 Détecteur d'Anomalies du code VHDL
 
-![Python](https://img.shields.io/badge/Python-3.10-blue)
-![Statut](https://img.shields.io/badge/statut-baseline%20RNN%20valid%C3%A9e%20%E2%80%94%20LSTM%20en%20cours-yellow)
+![Python](https://img.shields.io/badge/Outils-NumPy-blue)
+![Statut](https://img.shields.io/badge/Modèle-RNN-yellow)
 ![Licence](https://img.shields.io/badge/licence-%C3%A0%20d%C3%A9finir-lightgrey)
 
 > Un réseau de neurones récurrent (RNN) implémenté **entièrement en NumPy, sans framework de deep learning**, qui analyse du code source VHDL tokenisé pour détecter des erreurs syntaxiques et sémantiques avant simulation. Le projet évolue vers une cellule LSTM manuelle bidirectionnelle à tête multi-tâches.
