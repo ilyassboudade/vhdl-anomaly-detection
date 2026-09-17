@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Outils-NumPy-blue)
 ![Statut](https://img.shields.io/badge/Modèle-RNN-yellow)
-![Licence](https://img.shields.io/badge/licence-%C3%A0%20d%C3%A9finir-lightgrey)
+![Licence](https://img.shields.io/badge/Licence-%C3%A0%20d%C3%A9finir-lightgrey)
 
 > Un réseau de neurones récurrent (RNN) implémenté **entièrement en NumPy, sans framework de deep learning**, qui analyse du code source VHDL tokenisé pour détecter des erreurs syntaxiques et sémantiques avant simulation. Le projet évolue vers une cellule LSTM manuelle bidirectionnelle à tête multi-tâches.
 
