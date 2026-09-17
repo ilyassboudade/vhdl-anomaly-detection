@@ -1,4 +1,4 @@
-# 🚀 Détecteur d'Anomalies VHDL par RNN
+# 🚀 Détecteur d'Anomalies du code VHDL
 
 ![Python](https://img.shields.io/badge/Python-3.10-blue)
 ![Statut](https://img.shields.io/badge/statut-baseline%20RNN%20valid%C3%A9e%20%E2%80%94%20LSTM%20en%20cours-yellow)
